@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sheela — Live Q&A</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --card2: #232736;
+    --accent: #7c5cff;
+    --accent2: #9d85ff;
+    --text: #e8e9ee;
+    --muted: #9aa0b0;
+    --green: #34c98e;
+    --red: #ff6b6b;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  .container { max-width: 560px; margin: 0 auto; padding: 24px 16px 60px; }
+  h1 { font-size: 1.6rem; margin-bottom: 4px; }
+  h2 { font-size: 1.25rem; margin-bottom: 12px; }
+  .sub { color: var(--muted); margin-bottom: 24px; }
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .btn {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .btn:hover { background: var(--accent2); }
+  .btn.secondary { background: var(--card2); color: var(--text); }
+  .btn.danger { background: var(--red); }
+  .btn.small { padding: 7px 14px; font-size: .85rem; }
+  .btn.block { display: block; width: 100%; text-align: center; }
+  input[type="text"], textarea {
+    width: 100%;
+    background: var(--card2);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 12px 14px;
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+  input:focus, textarea:focus { outline: 2px solid var(--accent); }
+  textarea { resize: vertical; min-height: 80px; font-family: inherit; }
+  label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 6px; }
+  .code-display {
+    font-size: 3.5rem;
+    font-weight: 800;
+    letter-spacing: .35em;
+    text-align: center;
+    color: var(--accent2);
+    padding: 10px 0 10px .35em;
+  }
+  #qrcode { display: flex; justify-content: center; padding: 16px; background: #fff; border-radius: 10px; width: fit-content; margin: 0 auto 8px; }
+  .question {
+    background: var(--card2);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .qnum {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    border-radius: 8px;
+    min-width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .85rem;
+    flex-shrink: 0;
+  }
+  .qbody { flex: 1; }
+  .qtext { margin-bottom: 6px; line-height: 1.4; }
+  .qmeta { font-size: .78rem; color: var(--muted); }
+  .question.answered { opacity: .55; }
+  .question.answered .qnum { background: var(--green); }
+  .pill {
+    display: inline-block;
+    font-size: .72rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 99px;
+    background: var(--card2);
+    color: var(--muted);
+  }
+  .pill.live { background: rgba(52,201,142,.15); color: var(--green); }
+  .pill.ended { background: rgba(255,107,107,.15); color: var(--red); }
+  .row { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .empty { text-align: center; color: var(--muted); padding: 30px 10px; }
+  .back { color: var(--muted); text-decoration: none; font-size: .9rem; display: inline-block; margin-bottom: 16px; cursor: pointer; }
+  .back:hover { color: var(--text); }
+  .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .role-card {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: var(--radius);
+    padding: 22px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, transform .1s;
+  }
+  .role-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .role-card .emoji { font-size: 2rem; margin-bottom: 8px; }
+  .role-card .desc { font-size: .8rem; color: var(--muted); margin-top: 4px; }
+  .session-row { cursor: pointer; }
+  .session-row:hover { border-color: var(--accent); }
+  .code-input { text-transform: uppercase; letter-spacing: .3em; text-align: center; font-size: 1.5rem; font-weight: 700; }
+  .divider { border: none; border-top: 1px solid rgba(255,255,255,.08); margin: 18px 0; }
+  .notice { font-size: .8rem; color: var(--muted); line-height: 1.5; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="container" id="app"></div>
+<script>
+/* ============================================================
+   Storage layer — swap this out for a real backend (e.g.
+   Firebase) to sync across devices. localStorage syncs across
+   tabs on the same browser via the 'storage' event + polling.
+   ============================================================ */
+const STORE_KEY = 'sheela-data-v1';
+
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || { sessions: {} }; }
+  catch { return { sessions: {} }; }
+}
+function saveData(data) { localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
+
+function createSession(title, speaker) {
+  const data = loadData();
+  let code;
+  do {
+    code = Array.from({length: 4}, () =>
+      'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
+  } while (data.sessions[code]);
+  data.sessions[code] = { code, title, speaker: speaker || '', createdAt: Date.now(), ended: false, questions: [] };
+  saveData(data);
+  return code;
+}
+function getSession(code) { return loadData().sessions[(code || '').toUpperCase()] || null; }
+function addQuestion(code, text, name) {
+  const data = loadData();
+  const s = data.sessions[code];
+  if (!s || s.ended) return false;
+  s.questions.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2, 7), text, name: name || '', createdAt: Date.now(), answered: false });
+  saveData(data);
+  return true;
+}
+function markAnswered(code, qid) {
+  const data = loadData();
+  const q = data.sessions[code]?.questions.find(q => q.id === qid);
+  if (q) { q.answered = true; saveData(data); }
+}
+function endSession(code) {
+  const data = loadData();
+  if (data.sessions[code]) { data.sessions[code].ended = true; saveData(data); }
+}
+
+/* ============ helpers ============ */
+function timeAgo(ts) {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  return Math.floor(s / 86400) + 'd ago';
+}
+function esc(str) {
+  return (str || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ============ router / state ============ */
+const app = document.getElementById('app');
+let state = { view: 'home', code: null, myQuestions: [] };
+let pollTimer = null;
+
+function nav(view, code) {
+  state.view = view;
+  if (code !== undefined) state.code = code;
+  render();
+}
+
+function startPolling() {
+  clearInterval(pollTimer);
+  pollTimer = setInterval(() => {
+    if (['speaker-live', 'participant', 'admin', 'admin-session'].includes(state.view)) render(true);
+  }, 3000);
+}
+window.addEventListener('storage', e => { if (e.key === STORE_KEY) render(true); });
+
+/* ============ views ============ */
+function render(isRefresh) {
+  const v = state.view;
+  if (v === 'home') return renderHome();
+  if (v === 'speaker-new') return renderSpeakerNew();
+  if (v === 'speaker-live') return renderSpeakerLive();
+  if (v === 'join') return renderJoin();
+  if (v === 'participant') return renderParticipant(isRefresh);
+  if (v === 'admin') return renderAdmin();
+  if (v === 'admin-session') return renderAdminSession();
+}
+
+function renderHome() {
+  app.innerHTML = `
+    <h1>Sheela</h1>
+    <p class="sub">Live audience Q&amp;A for talks and lectures</p>
+    <div class="role-grid">
+      <div class="role-card" onclick="nav('speaker-new')">
+        <div class="emoji">🎤</div><strong>Speaker</strong>
+        <div class="desc">Start a session and take questions</div>
+      </div>
+      <div class="role-card" onclick="nav('join')">
+        <div class="emoji">🙋</div><strong>Participant</strong>
+        <div class="desc">Join with a code and ask</div>
+      </div>
+    </div>
+    <hr class="divider">
+    <a class="back" onclick="nav('admin')">Admin view →</a>
+    <p class="notice">Note: sessions and questions live in shared storage — anyone using this app can see them.</p>`;
+}
+
+function renderSpeakerNew() {
+  app.innerHTML = `
+    <a class="back" onclick="nav('home')">← Back</a>
+    <h2>New session</h2>
+    <div class="card">
+      <label>Talk title</label>
+      <input type="text" id="f-title" placeholder="e.g. Intro to Machine Learning" maxlength="120">
+      <label>Your name (optional)</label>
+      <input type="text" id="f-speaker" placeholder="e.g. Dr. Levi" maxlength="60">
+      <button class="btn block" onclick="doCreate()">Create session</button>
+    </div>`;
+  document.getElementById('f-title').focus();
+}
+function doCreate() {
+  const title = document.getElementById('f-title').value.trim();
+  if (!title) { alert('Please enter a talk title.'); return; }
+  const speaker = document.getElementById('f-speaker').value.trim();
+  const code = createSession(title, speaker);
+  nav('speaker-live', code);
+}
+
+function renderSpeakerLive() {
+  const s = getSession(state.code);
+  if (!s) return nav('home');
+  const open = s.questions.filter(q => !q.answered);
+  const done = s.questions.filter(q => q.answered);
+  const joinUrl = location.origin + location.pathname + '?join=' + s.code;
+  app.innerHTML = `
+    <a class="back" onclick="nav('home')">← Home</a>
+    <div class="row" style="margin-bottom:8px">
+      <h2 style="margin:0">${esc(s.title)}</h2>
+      <span class="pill ${s.ended ? 'ended' : 'live'}">${s.ended ? 'Ended' : 'Live'}</span>
+    </div>
+    ${s.speaker ? `<p class="sub">by ${esc(s.speaker)}</p>` : ''}
+    <div class="card">
+      <div class="code-display">${s.code}</div>
+      <div id="qrcode"></div>
+      <p class="notice" style="text-align:center">Scan to join, or enter the code at this page</p>
+    </div>
+    <div class="card">
+      <h2>Questions (${open.length})</h2>
+      ${open.length ? open.map((q, i) => `
+        <div class="question">
+          <div class="qnum">${s.questions.indexOf(q) + 1}</div>
+          <div class="qbody">
+            <div class="qtext">${esc(q.text)}</div>
+            <div class="qmeta">${esc(q.name) || 'Anonymous'} · ${timeAgo(q.createdAt)}</div>
+          </div>
+          <button class="btn small secondary" onclick="doAnswer('${q.id}')">Answered</button>
+        </div>`).join('') : '<div class="empty">No open questions yet — the feed refreshes automatically.</div>'}
+      ${done.length ? `<hr class="divider"><h2>Answered (${done.length})</h2>` + done.map(q => `
+        <div class="question answered">
+          <div class="qnum">✓</div>
+          <div class="qbody">
+            <div class="qtext">${esc(q.text)}</div>
+            <div class="qmeta">${esc(q.name) || 'Anonymous'} · ${timeAgo(q.createdAt)}</div>
+          </div>
+        </div>`).join('') : ''}
+    </div>
+    ${!s.ended ? `<button class="btn danger block" onclick="doEnd()">End session</button>` : ''}`;
+  new QRCode(document.getElementById('qrcode'), { text: joinUrl, width: 140, height: 140 });
+  startPolling();
+}
+function doAnswer(qid) { markAnswered(state.code, qid); render(); }
+function doEnd() { if (confirm('End this session?')) { endSession(state.code); render(); } }
+
+function renderJoin() {
+  app.innerHTML = `
+    <a class="back" onclick="nav('home')">← Back</a>
+    <h2>Join a session</h2>
+    <div class="card">
+      <label>Session code</label>
+      <input type="text" id="f-code" class="code-input" maxlength="4" placeholder="ABCD" autocomplete="off">
+      <button class="btn block" onclick="doJoin()">Join</button>
+    </div>`;
+  const inp = document.getElementById('f-code');
+  inp.focus();
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') doJoin(); });
+}
+function doJoin() {
+  const code = document.getElementById('f-code').value.trim().toUpperCase();
+  if (!getSession(code)) { alert('No session found with that code.'); return; }
+  nav('participant', code);
+}
+
+function renderParticipant(isRefresh) {
+  const s = getSession(state.code);
+  if (!s) return nav('home');
+  // preserve typed text across auto-refreshes
+  const prevQ = document.getElementById('f-q')?.value || '';
+  const prevN = document.getElementById('f-name')?.value || '';
+  const mine = s.questions.filter(q => state.myQuestions.includes(q.id));
+  app.innerHTML = `
+    <a class="back" onclick="nav('home')">← Leave</a>
+    <div class="row" style="margin-bottom:8px">
+      <h2 style="margin:0">${esc(s.title)}</h2>
+      <span class="pill ${s.ended ? 'ended' : 'live'}">${s.ended ? 'Ended' : 'Live'}</span>
+    </div>
+    ${s.speaker ? `<p class="sub">by ${esc(s.speaker)}</p>` : ''}
+    ${!s.ended ? `
+    <div class="card">
+      <label>Your question</label>
+      <textarea id="f-q" placeholder="Type your question…" maxlength="500"></textarea>
+      <label>Your name (optional — blank = anonymous)</label>
+      <input type="text" id="f-name" maxlength="60" placeholder="Anonymous">
+      <button class="btn block" onclick="doAsk()">Send question</button>
+    </div>` : '<div class="card empty">This session has ended.</div>'}
+    ${mine.length ? `<div class="card"><h2>Your questions</h2>` + mine.map(q => `
+      <div class="question ${q.answered ? 'answered' : ''}">
+        <div class="qnum">${q.answered ? '✓' : '…'}</div>
+        <div class="qbody">
+          <div class="qtext">${esc(q.text)}</div>
+          <div class="qmeta">${q.answered ? 'Answered' : 'Waiting'} · ${timeAgo(q.createdAt)}</div>
+        </div>
+      </div>`).join('') + '</div>' : ''}`;
+  if (isRefresh) {
+    document.getElementById('f-q') && (document.getElementById('f-q').value = prevQ);
+    document.getElementById('f-name') && (document.getElementById('f-name').value = prevN);
+  }
+  startPolling();
+}
+function doAsk() {
+  const text = document.getElementById('f-q').value.trim();
+  if (!text) { alert('Please type a question.'); return; }
+  const name = document.getElementById('f-name').value.trim();
+  const before = getSession(state.code).questions.length;
+  if (addQuestion(state.code, text, name)) {
+    const s = getSession(state.code);
+    state.myQuestions.push(s.questions[before].id);
+    document.getElementById('f-q').value = '';
+    render();
+  } else {
+    alert('This session has ended.');
+    render();
+  }
+}
+
+function renderAdmin() {
+  const sessions = Object.values(loadData().sessions).sort((a, b) => b.createdAt - a.createdAt);
+  app.innerHTML = `
+    <a class="back" onclick="nav('home')">← Home</a>
+    <h2>All sessions</h2>
+    ${sessions.length ? sessions.map(s => `
+      <div class="card session-row" onclick="nav('admin-session', '${s.code}')">
+        <div class="row">
+          <div>
+            <strong>${esc(s.title)}</strong>
+            <div class="qmeta" style="margin-top:4px">${s.code} · ${esc(s.speaker) || 'No speaker name'} · ${s.questions.length} question${s.questions.length === 1 ? '' : 's'} · ${timeAgo(s.createdAt)}</div>
+          </div>
+          <span class="pill ${s.ended ? 'ended' : 'live'}">${s.ended ? 'Ended' : 'Live'}</span>
+        </div>
+      </div>`).join('') : '<div class="empty">No sessions yet.</div>'}`;
+  startPolling();
+}
+
+function renderAdminSession() {
+  const s = getSession(state.code);
+  if (!s) return nav('admin');
+  app.innerHTML = `
+    <a class="back" onclick="nav('admin')">← All sessions</a>
+    <div class="row" style="margin-bottom:8px">
+      <h2 style="margin:0">${esc(s.title)}</h2>
+      <span class="pill ${s.ended ? 'ended' : 'live'}">${s.ended ? 'Ended' : 'Live'}</span>
+    </div>
+    <p class="sub">${s.code}${s.speaker ? ' · ' + esc(s.speaker) : ''}</p>
+    <div class="card">
+      ${s.questions.length ? s.questions.map((q, i) => `
+        <div class="question ${q.answered ? 'answered' : ''}">
+          <div class="qnum">${q.answered ? '✓' : i + 1}</div>
+          <div class="qbody">
+            <div class="qtext">${esc(q.text)}</div>
+            <div class="qmeta">${esc(q.name) || 'Anonymous'} · ${q.answered ? 'Answered' : 'Waiting'} · ${timeAgo(q.createdAt)}</div>
+          </div>
+        </div>`).join('') : '<div class="empty">No questions in this session.</div>'}
+    </div>`;
+  startPolling();
+}
+
+/* ============ init: QR deep-link ============ */
+const joinCode = new URLSearchParams(location.search).get('join');
+if (joinCode && getSession(joinCode)) {
+  state.code = joinCode.toUpperCase();
+  state.view = 'participant';
+}
+render();
+</script>
+</body>
+</html>
