@@ -16,6 +16,7 @@
     --muted: #9aa0b0;
     --green: #34c98e;
     --red: #ff6b6b;
+    --amber: #f5b944;
     --radius: 14px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -28,6 +29,7 @@
   .container { max-width: 560px; margin: 0 auto; padding: 24px 16px 60px; }
   h1 { font-size: 1.6rem; margin-bottom: 4px; }
   h2 { font-size: 1.25rem; margin-bottom: 12px; }
+  h3 { font-size: 1rem; margin-bottom: 8px; color: var(--muted); }
   .sub { color: var(--muted); margin-bottom: 24px; }
   .card {
     background: var(--card);
@@ -51,8 +53,10 @@
   .btn:hover { background: var(--accent2); }
   .btn.secondary { background: var(--card2); color: var(--text); }
   .btn.danger { background: var(--red); }
+  .btn.green { background: var(--green); }
   .btn.small { padding: 7px 14px; font-size: .85rem; }
   .btn.block { display: block; width: 100%; text-align: center; }
+  .btn:disabled { opacity: .5; cursor: default; }
   input[type="text"], textarea {
     width: 100%;
     background: var(--card2);
@@ -100,8 +104,23 @@
   .qbody { flex: 1; }
   .qtext { margin-bottom: 6px; line-height: 1.4; }
   .qmeta { font-size: .78rem; color: var(--muted); }
+  .qactions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
   .question.answered { opacity: .55; }
   .question.answered .qnum { background: var(--green); }
+  .question.pending-mod { border-left: 3px solid var(--amber); }
+  .votebtn {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: .85rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .votebtn.voted { background: var(--accent); border-color: var(--accent); }
+  .votebtn:disabled { opacity: .6; cursor: default; }
   .pill {
     display: inline-block;
     font-size: .72rem;
@@ -113,6 +132,7 @@
   }
   .pill.live { background: rgba(52,201,142,.15); color: var(--green); }
   .pill.ended { background: rgba(255,107,107,.15); color: var(--red); }
+  .pill.pending { background: rgba(245,185,68,.15); color: var(--amber); }
   .row { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
   .empty { text-align: center; color: var(--muted); padding: 30px 10px; }
   .back { color: var(--muted); text-decoration: none; font-size: .9rem; display: inline-block; margin-bottom: 16px; cursor: pointer; }
@@ -135,55 +155,109 @@
   .code-input { text-transform: uppercase; letter-spacing: .3em; text-align: center; font-size: 1.5rem; font-weight: 700; }
   .divider { border: none; border-top: 1px solid rgba(255,255,255,.08); margin: 18px 0; }
   .notice { font-size: .8rem; color: var(--muted); line-height: 1.5; margin-top: 10px; }
+  .banner {
+    background: rgba(245,185,68,.12);
+    border: 1px solid rgba(245,185,68,.3);
+    color: var(--amber);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: .82rem;
+    margin-bottom: 16px;
+    line-height: 1.4;
+  }
 </style>
 </head>
 <body>
 <div class="container" id="app"></div>
 <script>
 /* ============================================================
-   Storage layer — swap this out for a real backend (e.g.
-   Firebase) to sync across devices. localStorage syncs across
-   tabs on the same browser via the 'storage' event + polling.
+   CONFIG — set FIREBASE_DB_URL to your Firebase Realtime
+   Database URL (e.g. "https://sheela-xxxxx-default-rtdb.firebaseio.com")
+   to enable real cross-device sync. Leave empty to fall back to
+   localStorage (same-browser tabs only, good for local demos).
    ============================================================ */
-const STORE_KEY = 'sheela-data-v1';
+const FIREBASE_DB_URL = "https://sheela-54145-default-rtdb.firebaseio.com";
 
-function loadData() {
+const USING_FIREBASE = !!FIREBASE_DB_URL;
+const STORE_KEY = 'sheela-data-v2';
+
+/* client identity for one-vote-per-person */
+let CLIENT_ID = localStorage.getItem('sheela-client-id');
+if (!CLIENT_ID) {
+  CLIENT_ID = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  localStorage.setItem('sheela-client-id', CLIENT_ID);
+}
+
+/* ============ storage adapter ============ */
+async function fb(path, method = 'GET', body) {
+  const res = await fetch(FIREBASE_DB_URL + '/' + path + '.json', {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error('Storage error ' + res.status);
+  return res.json();
+}
+function lsLoad() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY)) || { sessions: {} }; }
   catch { return { sessions: {} }; }
 }
-function saveData(data) { localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
+function lsSave(d) { localStorage.setItem(STORE_KEY, JSON.stringify(d)); }
 
-function createSession(title, speaker) {
-  const data = loadData();
-  let code;
-  do {
-    code = Array.from({length: 4}, () =>
-      'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
-  } while (data.sessions[code]);
-  data.sessions[code] = { code, title, speaker: speaker || '', createdAt: Date.now(), ended: false, questions: [] };
-  saveData(data);
-  return code;
-}
-function getSession(code) { return loadData().sessions[(code || '').toUpperCase()] || null; }
-function addQuestion(code, text, name) {
-  const data = loadData();
-  const s = data.sessions[code];
-  if (!s || s.ended) return false;
-  s.questions.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2, 7), text, name: name || '', createdAt: Date.now(), answered: false });
-  saveData(data);
-  return true;
-}
-function markAnswered(code, qid) {
-  const data = loadData();
-  const q = data.sessions[code]?.questions.find(q => q.id === qid);
-  if (q) { q.answered = true; saveData(data); }
-}
-function endSession(code) {
-  const data = loadData();
-  if (data.sessions[code]) { data.sessions[code].ended = true; saveData(data); }
-}
+const store = {
+  async createSession(title, speaker) {
+    let code, exists;
+    do {
+      code = Array.from({length: 4}, () =>
+        'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
+      exists = await this.getSession(code);
+    } while (exists);
+    const s = { code, title, speaker: speaker || '', createdAt: Date.now(), ended: false, questions: {} };
+    if (USING_FIREBASE) await fb('sessions/' + code, 'PUT', s);
+    else { const d = lsLoad(); d.sessions[code] = s; lsSave(d); }
+    return code;
+  },
+  async getSession(code) {
+    code = (code || '').toUpperCase();
+    if (!code) return null;
+    if (USING_FIREBASE) return await fb('sessions/' + code);
+    return lsLoad().sessions[code] || null;
+  },
+  async listSessions() {
+    if (USING_FIREBASE) { const all = await fb('sessions'); return all ? Object.values(all) : []; }
+    return Object.values(lsLoad().sessions);
+  },
+  async addQuestion(code, text, name) {
+    const id = 'q' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    const q = { id, text, name: name || '', createdAt: Date.now(), status: 'pending', answered: false, votes: {} };
+    if (USING_FIREBASE) await fb('sessions/' + code + '/questions/' + id, 'PUT', q);
+    else { const d = lsLoad(); (d.sessions[code].questions ||= {})[id] = q; lsSave(d); }
+    return id;
+  },
+  async patchQuestion(code, qid, patch) {
+    if (USING_FIREBASE) await fb('sessions/' + code + '/questions/' + qid, 'PATCH', patch);
+    else { const d = lsLoad(); Object.assign(d.sessions[code].questions[qid], patch); lsSave(d); }
+  },
+  async vote(code, qid) {
+    if (USING_FIREBASE) await fb('sessions/' + code + '/questions/' + qid + '/votes/' + CLIENT_ID, 'PUT', true);
+    else { const d = lsLoad(); (d.sessions[code].questions[qid].votes ||= {})[CLIENT_ID] = true; lsSave(d); }
+  },
+  async unvote(code, qid) {
+    if (USING_FIREBASE) await fb('sessions/' + code + '/questions/' + qid + '/votes/' + CLIENT_ID, 'DELETE');
+    else { const d = lsLoad(); delete (d.sessions[code].questions[qid].votes || {})[CLIENT_ID]; lsSave(d); }
+  },
+  async endSession(code) {
+    if (USING_FIREBASE) await fb('sessions/' + code, 'PATCH', { ended: true });
+    else { const d = lsLoad(); d.sessions[code].ended = true; lsSave(d); }
+  }
+};
 
 /* ============ helpers ============ */
+function qlist(s) {
+  return Object.values(s.questions || {}).map(q => ({ ...q, votes: q.votes || {} }))
+    .sort((a, b) => a.createdAt - b.createdAt);
+}
+function voteCount(q) { return Object.keys(q.votes || {}).length; }
 function timeAgo(ts) {
   const s = Math.floor((Date.now() - ts) / 1000);
   if (s < 60) return 'just now';
@@ -197,15 +271,18 @@ function esc(str) {
 
 /* ============ router / state ============ */
 const app = document.getElementById('app');
-let state = { view: 'home', code: null, myQuestions: [] };
+let state = { view: 'home', code: null, myQuestions: JSON.parse(localStorage.getItem('sheela-mine') || '[]') };
 let pollTimer = null;
 
+function rememberMine(qid) {
+  state.myQuestions.push(qid);
+  localStorage.setItem('sheela-mine', JSON.stringify(state.myQuestions));
+}
 function nav(view, code) {
   state.view = view;
   if (code !== undefined) state.code = code;
   render();
 }
-
 function startPolling() {
   clearInterval(pollTimer);
   pollTimer = setInterval(() => {
@@ -215,21 +292,32 @@ function startPolling() {
 window.addEventListener('storage', e => { if (e.key === STORE_KEY) render(true); });
 
 /* ============ views ============ */
-function render(isRefresh) {
+async function render(isRefresh) {
   const v = state.view;
-  if (v === 'home') return renderHome();
-  if (v === 'speaker-new') return renderSpeakerNew();
-  if (v === 'speaker-live') return renderSpeakerLive();
-  if (v === 'join') return renderJoin();
-  if (v === 'participant') return renderParticipant(isRefresh);
-  if (v === 'admin') return renderAdmin();
-  if (v === 'admin-session') return renderAdminSession();
+  try {
+    if (v === 'home') return renderHome();
+    if (v === 'speaker-new') return renderSpeakerNew();
+    if (v === 'speaker-live') return await renderSpeakerLive();
+    if (v === 'join') return renderJoin();
+    if (v === 'participant') return await renderParticipant(isRefresh);
+    if (v === 'admin') return await renderAdmin();
+    if (v === 'admin-session') return await renderAdminSession();
+  } catch (err) {
+    if (!isRefresh) app.innerHTML = `<div class="card empty">Connection problem — retrying…<br><span class="qmeta">${esc(err.message)}</span></div>`;
+    startPolling();
+  }
+}
+
+function storageBanner() {
+  return USING_FIREBASE ? '' :
+    `<div class="banner">Demo mode: data only syncs between tabs on this browser. Configure FIREBASE_DB_URL in index.html for real cross-device sync.</div>`;
 }
 
 function renderHome() {
   app.innerHTML = `
     <h1>Sheela</h1>
     <p class="sub">Live audience Q&amp;A for talks and lectures</p>
+    ${storageBanner()}
     <div class="role-grid">
       <div class="role-card" onclick="nav('speaker-new')">
         <div class="emoji">🎤</div><strong>Speaker</strong>
@@ -242,7 +330,7 @@ function renderHome() {
     </div>
     <hr class="divider">
     <a class="back" onclick="nav('admin')">Admin view →</a>
-    <p class="notice">Note: sessions and questions live in shared storage — anyone using this app can see them.</p>`;
+    <p class="notice">Note: sessions and questions live in shared storage — anyone using this app can see them. New questions are held for admin approval before the speaker sees them.</p>`;
 }
 
 function renderSpeakerNew() {
@@ -254,23 +342,27 @@ function renderSpeakerNew() {
       <input type="text" id="f-title" placeholder="e.g. Intro to Machine Learning" maxlength="120">
       <label>Your name (optional)</label>
       <input type="text" id="f-speaker" placeholder="e.g. Dr. Levi" maxlength="60">
-      <button class="btn block" onclick="doCreate()">Create session</button>
+      <button class="btn block" id="b-create" onclick="doCreate()">Create session</button>
     </div>`;
   document.getElementById('f-title').focus();
 }
-function doCreate() {
+async function doCreate() {
   const title = document.getElementById('f-title').value.trim();
   if (!title) { alert('Please enter a talk title.'); return; }
   const speaker = document.getElementById('f-speaker').value.trim();
-  const code = createSession(title, speaker);
+  document.getElementById('b-create').disabled = true;
+  const code = await store.createSession(title, speaker);
   nav('speaker-live', code);
 }
 
-function renderSpeakerLive() {
-  const s = getSession(state.code);
+async function renderSpeakerLive() {
+  const s = await store.getSession(state.code);
   if (!s) return nav('home');
-  const open = s.questions.filter(q => !q.answered);
-  const done = s.questions.filter(q => q.answered);
+  const qs = qlist(s);
+  const open = qs.filter(q => q.status === 'approved' && !q.answered)
+    .sort((a, b) => voteCount(b) - voteCount(a) || a.createdAt - b.createdAt);
+  const done = qs.filter(q => q.answered);
+  const pendingCount = qs.filter(q => q.status === 'pending').length;
   const joinUrl = location.origin + location.pathname + '?join=' + s.code;
   app.innerHTML = `
     <a class="back" onclick="nav('home')">← Home</a>
@@ -284,17 +376,18 @@ function renderSpeakerLive() {
       <div id="qrcode"></div>
       <p class="notice" style="text-align:center">Scan to join, or enter the code at this page</p>
     </div>
+    ${pendingCount ? `<div class="banner">${pendingCount} question${pendingCount === 1 ? '' : 's'} awaiting admin approval</div>` : ''}
     <div class="card">
       <h2>Questions (${open.length})</h2>
-      ${open.length ? open.map((q, i) => `
+      ${open.length ? open.map(q => `
         <div class="question">
-          <div class="qnum">${s.questions.indexOf(q) + 1}</div>
+          <div class="qnum">▲${voteCount(q)}</div>
           <div class="qbody">
             <div class="qtext">${esc(q.text)}</div>
             <div class="qmeta">${esc(q.name) || 'Anonymous'} · ${timeAgo(q.createdAt)}</div>
           </div>
           <button class="btn small secondary" onclick="doAnswer('${q.id}')">Answered</button>
-        </div>`).join('') : '<div class="empty">No open questions yet — the feed refreshes automatically.</div>'}
+        </div>`).join('') : '<div class="empty">No approved questions yet — the feed refreshes automatically.</div>'}
       ${done.length ? `<hr class="divider"><h2>Answered (${done.length})</h2>` + done.map(q => `
         <div class="question answered">
           <div class="qnum">✓</div>
@@ -308,8 +401,8 @@ function renderSpeakerLive() {
   new QRCode(document.getElementById('qrcode'), { text: joinUrl, width: 140, height: 140 });
   startPolling();
 }
-function doAnswer(qid) { markAnswered(state.code, qid); render(); }
-function doEnd() { if (confirm('End this session?')) { endSession(state.code); render(); } }
+async function doAnswer(qid) { await store.patchQuestion(state.code, qid, { answered: true }); render(); }
+async function doEnd() { if (confirm('End this session?')) { await store.endSession(state.code); render(); } }
 
 function renderJoin() {
   app.innerHTML = `
@@ -324,19 +417,21 @@ function renderJoin() {
   inp.focus();
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') doJoin(); });
 }
-function doJoin() {
+async function doJoin() {
   const code = document.getElementById('f-code').value.trim().toUpperCase();
-  if (!getSession(code)) { alert('No session found with that code.'); return; }
+  if (!(await store.getSession(code))) { alert('No session found with that code.'); return; }
   nav('participant', code);
 }
 
-function renderParticipant(isRefresh) {
-  const s = getSession(state.code);
+async function renderParticipant(isRefresh) {
+  const s = await store.getSession(state.code);
   if (!s) return nav('home');
-  // preserve typed text across auto-refreshes
   const prevQ = document.getElementById('f-q')?.value || '';
   const prevN = document.getElementById('f-name')?.value || '';
-  const mine = s.questions.filter(q => state.myQuestions.includes(q.id));
+  const qs = qlist(s);
+  const board = qs.filter(q => q.status === 'approved' && !q.answered)
+    .sort((a, b) => voteCount(b) - voteCount(a) || a.createdAt - b.createdAt);
+  const mine = qs.filter(q => state.myQuestions.includes(q.id));
   app.innerHTML = `
     <a class="back" onclick="nav('home')">← Leave</a>
     <div class="row" style="margin-bottom:8px">
@@ -351,58 +446,85 @@ function renderParticipant(isRefresh) {
       <label>Your name (optional — blank = anonymous)</label>
       <input type="text" id="f-name" maxlength="60" placeholder="Anonymous">
       <button class="btn block" onclick="doAsk()">Send question</button>
+      <p class="notice">Questions appear after admin approval.</p>
     </div>` : '<div class="card empty">This session has ended.</div>'}
-    ${mine.length ? `<div class="card"><h2>Your questions</h2>` + mine.map(q => `
-      <div class="question ${q.answered ? 'answered' : ''}">
-        <div class="qnum">${q.answered ? '✓' : '…'}</div>
+    ${board.length ? `<div class="card"><h2>Question board</h2>` + board.map(q => {
+      const voted = q.votes[CLIENT_ID];
+      return `
+      <div class="question">
         <div class="qbody">
           <div class="qtext">${esc(q.text)}</div>
-          <div class="qmeta">${q.answered ? 'Answered' : 'Waiting'} · ${timeAgo(q.createdAt)}</div>
+          <div class="qmeta">${esc(q.name) || 'Anonymous'} · ${timeAgo(q.createdAt)}</div>
         </div>
-      </div>`).join('') + '</div>' : ''}`;
+        <button class="votebtn ${voted ? 'voted' : ''}" ${s.ended ? 'disabled' : ''} onclick="doVote('${q.id}', ${!!voted})">▲ ${voteCount(q)}</button>
+      </div>`;
+    }).join('') + '</div>' : ''}
+    ${mine.length ? `<div class="card"><h2>Your questions</h2>` + mine.map(q => {
+      const label = q.answered ? 'Answered' :
+        q.status === 'pending' ? 'Awaiting approval' :
+        q.status === 'rejected' ? 'Not approved' : 'On the board';
+      return `
+      <div class="question ${q.answered ? 'answered' : ''} ${q.status === 'pending' ? 'pending-mod' : ''}">
+        <div class="qnum">${q.answered ? '✓' : q.status === 'pending' ? '⏳' : q.status === 'rejected' ? '✕' : '▲' + voteCount(q)}</div>
+        <div class="qbody">
+          <div class="qtext">${esc(q.text)}</div>
+          <div class="qmeta">${label} · ${timeAgo(q.createdAt)}</div>
+        </div>
+      </div>`;
+    }).join('') + '</div>' : ''}`;
   if (isRefresh) {
     document.getElementById('f-q') && (document.getElementById('f-q').value = prevQ);
     document.getElementById('f-name') && (document.getElementById('f-name').value = prevN);
   }
   startPolling();
 }
-function doAsk() {
+async function doAsk() {
   const text = document.getElementById('f-q').value.trim();
   if (!text) { alert('Please type a question.'); return; }
   const name = document.getElementById('f-name').value.trim();
-  const before = getSession(state.code).questions.length;
-  if (addQuestion(state.code, text, name)) {
-    const s = getSession(state.code);
-    state.myQuestions.push(s.questions[before].id);
-    document.getElementById('f-q').value = '';
-    render();
-  } else {
-    alert('This session has ended.');
-    render();
-  }
+  const s = await store.getSession(state.code);
+  if (!s || s.ended) { alert('This session has ended.'); render(); return; }
+  const qid = await store.addQuestion(state.code, text, name);
+  rememberMine(qid);
+  render();
+}
+async function doVote(qid, alreadyVoted) {
+  if (alreadyVoted) await store.unvote(state.code, qid);
+  else await store.vote(state.code, qid);
+  render();
 }
 
-function renderAdmin() {
-  const sessions = Object.values(loadData().sessions).sort((a, b) => b.createdAt - a.createdAt);
+async function renderAdmin() {
+  const sessions = (await store.listSessions()).sort((a, b) => b.createdAt - a.createdAt);
   app.innerHTML = `
     <a class="back" onclick="nav('home')">← Home</a>
     <h2>All sessions</h2>
-    ${sessions.length ? sessions.map(s => `
+    ${sessions.length ? sessions.map(s => {
+      const qs = qlist(s);
+      const pending = qs.filter(q => q.status === 'pending').length;
+      return `
       <div class="card session-row" onclick="nav('admin-session', '${s.code}')">
         <div class="row">
           <div>
             <strong>${esc(s.title)}</strong>
-            <div class="qmeta" style="margin-top:4px">${s.code} · ${esc(s.speaker) || 'No speaker name'} · ${s.questions.length} question${s.questions.length === 1 ? '' : 's'} · ${timeAgo(s.createdAt)}</div>
+            <div class="qmeta" style="margin-top:4px">${s.code} · ${esc(s.speaker) || 'No speaker name'} · ${qs.length} question${qs.length === 1 ? '' : 's'} · ${timeAgo(s.createdAt)}</div>
           </div>
-          <span class="pill ${s.ended ? 'ended' : 'live'}">${s.ended ? 'Ended' : 'Live'}</span>
+          <div>
+            ${pending ? `<span class="pill pending">${pending} to review</span> ` : ''}
+            <span class="pill ${s.ended ? 'ended' : 'live'}">${s.ended ? 'Ended' : 'Live'}</span>
+          </div>
         </div>
-      </div>`).join('') : '<div class="empty">No sessions yet.</div>'}`;
+      </div>`;
+    }).join('') : '<div class="empty">No sessions yet.</div>'}`;
   startPolling();
 }
 
-function renderAdminSession() {
-  const s = getSession(state.code);
+async function renderAdminSession() {
+  const s = await store.getSession(state.code);
   if (!s) return nav('admin');
+  const qs = qlist(s);
+  const pending = qs.filter(q => q.status === 'pending');
+  const rest = qs.filter(q => q.status !== 'pending');
   app.innerHTML = `
     <a class="back" onclick="nav('admin')">← All sessions</a>
     <div class="row" style="margin-bottom:8px">
@@ -411,25 +533,46 @@ function renderAdminSession() {
     </div>
     <p class="sub">${s.code}${s.speaker ? ' · ' + esc(s.speaker) : ''}</p>
     <div class="card">
-      ${s.questions.length ? s.questions.map((q, i) => `
-        <div class="question ${q.answered ? 'answered' : ''}">
-          <div class="qnum">${q.answered ? '✓' : i + 1}</div>
+      <h2>Awaiting approval (${pending.length})</h2>
+      ${pending.length ? pending.map(q => `
+        <div class="question pending-mod">
           <div class="qbody">
             <div class="qtext">${esc(q.text)}</div>
-            <div class="qmeta">${esc(q.name) || 'Anonymous'} · ${q.answered ? 'Answered' : 'Waiting'} · ${timeAgo(q.createdAt)}</div>
+            <div class="qmeta">${esc(q.name) || 'Anonymous'} · ${timeAgo(q.createdAt)}</div>
           </div>
-        </div>`).join('') : '<div class="empty">No questions in this session.</div>'}
+          <div class="qactions">
+            <button class="btn small green" onclick="doModerate('${q.id}', 'approved')">Approve</button>
+            <button class="btn small danger" onclick="doModerate('${q.id}', 'rejected')">Reject</button>
+          </div>
+        </div>`).join('') : '<div class="empty">Nothing waiting for review.</div>'}
+    </div>
+    <div class="card">
+      <h2>All questions (${rest.length})</h2>
+      ${rest.length ? rest.map((q, i) => `
+        <div class="question ${q.answered ? 'answered' : ''}">
+          <div class="qnum">${q.answered ? '✓' : q.status === 'rejected' ? '✕' : '▲' + voteCount(q)}</div>
+          <div class="qbody">
+            <div class="qtext">${esc(q.text)}</div>
+            <div class="qmeta">${esc(q.name) || 'Anonymous'} · ${q.answered ? 'Answered' : q.status === 'rejected' ? 'Rejected' : 'On the board'} · ${timeAgo(q.createdAt)}</div>
+          </div>
+        </div>`).join('') : '<div class="empty">No moderated questions yet.</div>'}
     </div>`;
   startPolling();
 }
+async function doModerate(qid, status) {
+  await store.patchQuestion(state.code, qid, { status });
+  render();
+}
 
 /* ============ init: QR deep-link ============ */
-const joinCode = new URLSearchParams(location.search).get('join');
-if (joinCode && getSession(joinCode)) {
-  state.code = joinCode.toUpperCase();
-  state.view = 'participant';
-}
-render();
+(async () => {
+  const joinCode = new URLSearchParams(location.search).get('join');
+  if (joinCode && await store.getSession(joinCode)) {
+    state.code = joinCode.toUpperCase();
+    state.view = 'participant';
+  }
+  render();
+})();
 </script>
 </body>
 </html>
