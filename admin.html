@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sheela — Speaker Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body class="admin">
+  <div class="container">
+    <header class="brand">
+      <h1>Sheela</h1>
+      <div class="tagline">Speaker Dashboard</div>
+    </header>
+
+    <div class="card qr-card">
+      <h2>Scan to ask a question</h2>
+      <div class="hint">Display this screen to your audience</div>
+      <div id="qrcode"></div>
+      <div class="url">https://havtamdigital-gif.github.io/sheela/</div>
+    </div>
+
+    <div class="stats-bar">
+      <h2>Questions</h2>
+      <span class="count"><span id="count">0</span> total</span>
+    </div>
+
+    <div id="question-list">
+      <div class="empty-state">
+        <div class="icon">🌸</div>
+        Waiting for the first question…
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="admin.js"></script>
+</body>
+</html>

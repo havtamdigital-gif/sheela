@@ -1,15 +1,26 @@
-# Sheela — Live Q&A
+# Sheela — Live Lecture Q&A
 
-A lightweight audience Q&A app for talks and lectures. Single-file, no build step: open `index.html` in a browser.
+Participants scan a QR code, land on a clean question form, and their questions appear live on the speaker's admin page.
 
-## Roles
+**Live site:** https://havtamdigital-gif.github.io/sheela/
 
-- **Speaker** — create a session with a talk title (and optional name); get a big 4-character code plus a scannable QR code. Approved questions arrive sorted by upvotes, each with asker name (or "Anonymous") and time. Tap "Answered" to move a question to the done pile; "End session" when finished. Feed refreshes every few seconds.
-- **Participant** — scan the QR (opens the app pre-joined via `?join=CODE`) or type the code. Ask questions (blank name = anonymous), upvote others' questions on the board, and track your own questions' status: awaiting approval, on the board, answered, or not approved.
-- **Admin** — see every session (live and ended), approve or reject incoming questions before the speaker sees them, and view each session's full question list. The Admin view is gated by a passcode (stored as a SHA-256 hash in `index.html`).
+## Pages
 
-## Storage
+- `index.html` — public participant page: optional name + question form, submits to Firestore without a page refresh, then shows "Thank you, your question was sent."
+- `admin.html` — speaker page (passcode-protected): large QR code pointing at the participant page, live total, and a realtime list of questions (newest first) with **Mark as answered** and **Hide question** buttons. Updates live via a Firestore realtime listener — no refresh needed.
+- `classic.html` — the previous multi-session Q&A app, kept so nothing breaks.
 
-Set `FIREBASE_DB_URL` at the top of the script in `index.html` to a Firebase Realtime Database URL for real cross-device sync (participants' phones → speaker's laptop). If left empty, the app falls back to `localStorage`, which syncs across tabs on the same browser only — fine for local demos.
+## Files
 
-The QR code encodes the page's current URL with the session code attached, so it works best once the app is hosted somewhere participants' phones can reach.
+- `style.css` — shared styling (soft Sheela brand, mobile-first).
+- `app.js` — participant logic (validation, ≤500 chars, double-submit protection).
+- `admin.js` — admin logic (passcode gate, realtime listener, actions).
+- `firebase-config.js` — public Firebase web config. To point at a different Firebase project, paste its config over the values in this file (Firebase console → Project settings → General → Your apps).
+
+## Firebase
+
+Uses Cloud Firestore (modular SDK, CDN imports), collection `questions`, documents: `{ name, question, createdAt, answered, hidden }`. Security rules allow anyone to create a valid question (≤500 chars) and flip `answered`/`hidden`; deletes and other edits are rejected. Only the public web config is exposed — no admin credentials.
+
+## Publishing changes
+
+The site auto-deploys from the `main` branch via GitHub Pages: commit changes to `main` (edit on github.com or `git push`), wait ~1 minute, hard-refresh the site.
