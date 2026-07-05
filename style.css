@@ -261,6 +261,140 @@ textarea { resize: vertical; min-height: 110px; }
 }
 .empty-state .icon { font-size: 2rem; margin-bottom: 12px; }
 
+/* ============ Home role choice ============ */
+.role-choice {
+  text-align: center;
+  cursor: pointer;
+  transition: transform .12s, box-shadow .12s;
+}
+.role-choice:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(196, 110, 133, 0.18); }
+.role-choice .role-icon { font-size: 2.2rem; margin-bottom: 8px; }
+.role-choice h2 {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 1.3rem;
+  color: var(--rose-deep);
+  margin-bottom: 6px;
+}
+.role-choice p { color: var(--muted); font-size: .9rem; }
+
+.join-row { display: flex; gap: 10px; margin-top: 16px; }
+.code-input {
+  text-transform: uppercase;
+  letter-spacing: .35em;
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 0 !important;
+}
+.btn.slim { width: auto; padding: 12px 26px; }
+
+.linklike {
+  display: block;
+  margin: 14px auto 0;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: .9rem;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: underline;
+}
+
+.card-lite {
+  text-align: center;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 1.25rem;
+  color: var(--rose-deep);
+  margin-bottom: 18px;
+}
+.card-lite span { font-size: .95rem; color: var(--muted); font-family: "Assistant", sans-serif; }
+
+.code-display {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 2.6rem;
+  font-weight: 600;
+  letter-spacing: .4em;
+  color: var(--rose-deep);
+  padding-left: .4em;
+  margin-bottom: 12px;
+}
+
+.danger-btn {
+  background: #fff;
+  color: #b35f5f;
+  border: 1.5px solid #eccaca;
+  box-shadow: none;
+  margin-top: 10px;
+}
+.danger-btn:hover { box-shadow: none; background: #fdf3f3; }
+
+.speaker-link { color: var(--rose-deep); font-weight: 600; text-decoration: none; }
+.speaker-link:hover { text-decoration: underline; }
+
+/* ============ Creator admin ============ */
+.session-block { padding: 20px; }
+.session-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.session-head .meta { color: var(--muted); font-size: .82rem; margin-top: 4px; }
+.pill-tag {
+  display: inline-block;
+  background: var(--rose-soft);
+  color: var(--rose-deep);
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 4px 13px;
+  font-size: .8rem;
+}
+.pill-tag.live { background: #e4f2ea; color: #4e8c6e; }
+.pill-tag.ended { background: #f2e6e6; color: #b35f5f; }
+
+.question-card.compact {
+  box-shadow: none;
+  border: 1px solid #f3e6ea;
+  padding: 13px 15px;
+  margin-bottom: 9px;
+}
+.question-card.compact .qtext { font-size: 1rem; margin-bottom: 5px; }
+.question-card.hidden-q { opacity: .45; border-style: dashed; }
+
+/* ============ Speaker dashboard insight badges ============ */
+.dup-badge {
+  display: inline-block;
+  background: var(--rose-soft);
+  color: var(--rose-deep);
+  font-weight: 700;
+  font-size: .78rem;
+  border-radius: 999px;
+  padding: 3px 12px;
+  margin-inline-start: 8px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.new-badge {
+  display: inline-block;
+  background: #e4f2ea;
+  color: #4e8c6e;
+  font-weight: 700;
+  font-size: .72rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 3px 10px;
+  margin-inline-start: 8px;
+  vertical-align: middle;
+}
+/* similar cards sit visually together: indented with a softer edge */
+.question-card.similar {
+  margin-inline-start: 22px;
+  border-inline-start-color: var(--gold);
+}
+
 @media (max-width: 520px) {
   .brand h1 { font-size: 2.1rem; }
   .card { padding: 22px 18px; }

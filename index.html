@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sheela — Ask a Question</title>
+<title>Sheela — Live Lecture Q&A</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
@@ -16,27 +16,67 @@
       <div class="flourish">✿ ✿ ✿</div>
     </header>
 
-    <div class="card">
-      <form id="question-form" novalidate>
-        <label for="name">Your name <span class="optional">(optional)</span></label>
-        <input type="text" id="name" maxlength="60" placeholder="Anonymous" autocomplete="name">
-
-        <label for="question">Your question</label>
-        <textarea id="question" maxlength="500" required placeholder="What would you like to ask?"></textarea>
-        <div class="char-count"><span id="chars">0</span>/500</div>
-        <div class="error-msg" id="error-msg"></div>
-
-        <button type="submit" class="btn" id="submit-btn">Send question</button>
-      </form>
-
-      <div class="success" id="success">
-        <div class="icon">🌸</div>
-        <p>Thank you, your question was sent.</p>
-        <button class="again" id="ask-again">Ask another question</button>
+    <!-- HOME: choose role (shown when no session in URL) -->
+    <div id="home" style="display:none">
+      <div class="card role-choice" id="role-speaker">
+        <div class="role-icon">🎤</div>
+        <h2>I'm giving a talk</h2>
+        <p>Create a Q&amp;A session and get a QR code for your audience</p>
+      </div>
+      <div class="card role-choice" id="role-join">
+        <div class="role-icon">🙋‍♀️</div>
+        <h2>I'm in the audience</h2>
+        <p>Scan the QR on screen — or enter the 4-letter code</p>
+        <div class="join-row" style="display:none">
+          <input type="text" id="join-code" class="code-input" maxlength="4" placeholder="ABCD" autocomplete="off">
+          <button class="btn slim" id="join-btn">Join</button>
+        </div>
       </div>
     </div>
 
-    <p class="footer-note">Your question goes directly to the speaker.<br>Leave the name field empty to stay anonymous.</p>
+    <!-- CREATE SESSION (speaker) -->
+    <div id="create" style="display:none">
+      <div class="card">
+        <label for="talk-title">Talk title</label>
+        <input type="text" id="talk-title" maxlength="120" placeholder="e.g. The Art of Storytelling">
+        <label for="speaker-name">Your name <span class="optional">(optional)</span></label>
+        <input type="text" id="speaker-name" maxlength="60" placeholder="Speaker">
+        <div class="error-msg" id="create-error"></div>
+        <button class="btn" id="create-btn">Create session</button>
+        <button class="linklike" id="create-back">← Back</button>
+      </div>
+    </div>
+
+    <!-- ASK (participant, session in URL) -->
+    <div id="ask" style="display:none">
+      <div class="session-title card-lite" id="session-title"></div>
+      <div class="card">
+        <form id="question-form" novalidate>
+          <label for="name">Your name <span class="optional">(optional)</span></label>
+          <input type="text" id="name" maxlength="60" placeholder="Anonymous" autocomplete="name">
+
+          <label for="question">Your question</label>
+          <textarea id="question" maxlength="500" required placeholder="What would you like to ask?"></textarea>
+          <div class="char-count"><span id="chars">0</span>/500</div>
+          <div class="error-msg" id="error-msg"></div>
+
+          <button type="submit" class="btn" id="submit-btn">Send question</button>
+        </form>
+
+        <div class="success" id="success">
+          <div class="icon">🌸</div>
+          <p>Thank you, your question was sent.</p>
+          <button class="again" id="ask-again">Ask another question</button>
+        </div>
+      </div>
+      <p class="footer-note">Your question goes directly to the speaker.<br>Leave the name field empty to stay anonymous.</p>
+    </div>
+
+    <div id="not-found" class="empty-state" style="display:none">
+      <div class="icon">🌷</div>
+      This session was not found or has ended.<br><br>
+      <a href="./" class="speaker-link">← Start over</a>
+    </div>
   </div>
 
   <script type="module" src="app.js"></script>
