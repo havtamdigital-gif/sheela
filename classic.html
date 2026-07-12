@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sheela — Live Q&A</title>
+<title>Sheela Li — Live Q&A</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   :root {
@@ -172,23 +172,23 @@
 <script>
 /* ============================================================
    CONFIG — set FIREBASE_DB_URL to your Firebase Realtime
-   Database URL (e.g. "https://sheela-xxxxx-default-rtdb.firebaseio.com")
+   Database URL (e.g. "https://Sheela Li-xxxxx-default-rtdb.firebaseio.com")
    to enable real cross-device sync. Leave empty to fall back to
    localStorage (same-browser tabs only, good for local demos).
    ============================================================ */
-const FIREBASE_DB_URL = "https://sheela-54145-default-rtdb.firebaseio.com";
+const FIREBASE_DB_URL = "https://Sheela Li-54145-default-rtdb.firebaseio.com";
 
 /* SHA-256 hash of the admin passcode — change by hashing a new code */
 const ADMIN_PIN_HASH = "3149445257c74613d52f427610652e64f57299006bef4c000565f8042de76175";
 
 const USING_FIREBASE = !!FIREBASE_DB_URL;
-const STORE_KEY = 'sheela-data-v2';
+const STORE_KEY = 'Sheela Li-data-v2';
 
 /* client identity for one-vote-per-person */
-let CLIENT_ID = localStorage.getItem('sheela-client-id');
+let CLIENT_ID = localStorage.getItem('Sheela Li-client-id');
 if (!CLIENT_ID) {
   CLIENT_ID = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  localStorage.setItem('sheela-client-id', CLIENT_ID);
+  localStorage.setItem('Sheela Li-client-id', CLIENT_ID);
 }
 
 /* ============ storage adapter ============ */
@@ -274,20 +274,20 @@ function esc(str) {
 
 /* ============ router / state ============ */
 const app = document.getElementById('app');
-let state = { view: 'home', code: null, myQuestions: JSON.parse(localStorage.getItem('sheela-mine') || '[]') };
+let state = { view: 'home', code: null, myQuestions: JSON.parse(localStorage.getItem('Sheela Li-mine') || '[]') };
 let pollTimer = null;
 
 function rememberMine(qid) {
   state.myQuestions.push(qid);
-  localStorage.setItem('sheela-mine', JSON.stringify(state.myQuestions));
+  localStorage.setItem('Sheela Li-mine', JSON.stringify(state.myQuestions));
 }
 async function requireAdmin() {
-  if (sessionStorage.getItem('sheela-admin-ok') === '1') return true;
+  if (sessionStorage.getItem('Sheela Li-admin-ok') === '1') return true;
   const pin = prompt('Admin passcode:');
   if (pin === null) return false;
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin.trim()));
   const hex = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
-  if (hex === ADMIN_PIN_HASH) { sessionStorage.setItem('sheela-admin-ok', '1'); return true; }
+  if (hex === ADMIN_PIN_HASH) { sessionStorage.setItem('Sheela Li-admin-ok', '1'); return true; }
   alert('Wrong passcode.');
   return false;
 }
@@ -329,7 +329,7 @@ function storageBanner() {
 
 function renderHome() {
   app.innerHTML = `
-    <h1>Sheela</h1>
+    <h1>Sheela Li</h1>
     <p class="sub">Live audience Q&amp;A for talks and lectures</p>
     ${storageBanner()}
     <div class="role-grid">
