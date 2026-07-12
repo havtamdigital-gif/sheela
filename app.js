@@ -79,9 +79,9 @@ $("create-btn").addEventListener("click", async () => {
       ended: false
     });
     // remember my sessions on this device
-    const mine = JSON.parse(localStorage.getItem("sheela-my-sessions") || "[]");
+    const mine = JSON.parse(localStorage.getItem("Sheela Li Li-my-sessions") || "[]");
     mine.push(code);
-    localStorage.setItem("sheela-my-sessions", JSON.stringify(mine));
+    localStorage.setItem("Sheela Li Li-my-sessions", JSON.stringify(mine));
     location.href = "speaker.html?c=" + code;
   } catch (e) {
     err.textContent = "Could not create the session — please try again.";
