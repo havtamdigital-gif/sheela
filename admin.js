@@ -8,12 +8,12 @@ import { firebaseConfig } from "./firebase-config.js";
 /* --- passcode gate: only the app creator --- */
 const ADMIN_PIN_HASH = "3149445257c74613d52f427610652e64f57299006bef4c000565f8042de76175";
 async function requireAdmin() {
-  if (sessionStorage.getItem("sheela-admin-ok") === "1") return true;
+  if (sessionStorage.getItem("Sheela Li-admin-ok") === "1") return true;
   const pin = prompt("Admin passcode:");
   if (pin === null) return false;
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pin.trim()));
   const hex = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
-  if (hex === ADMIN_PIN_HASH) { sessionStorage.setItem("sheela-admin-ok", "1"); return true; }
+  if (hex === ADMIN_PIN_HASH) { sessionStorage.setItem("Sheela Li-admin-ok", "1"); return true; }
   alert("Wrong passcode.");
   return false;
 }
